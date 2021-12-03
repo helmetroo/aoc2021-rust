@@ -25,6 +25,7 @@ pub fn read(num: u8, test_input: bool) -> Vec<String> {
         .collect()
 }
 
+// Common parsers here
 pub fn as_unsigned_short(item: &String) -> u16 {
     match item.parse::<u16>() {
         Ok(num) => num,
