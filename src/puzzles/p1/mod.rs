@@ -19,6 +19,23 @@ fn count_increases(depths: &Vec<u16>) -> u16 {
     increases
 }
 
+fn build_list_of_summed_windows(depths: &Vec<u16>) -> Vec<u16> {
+    let num_depths = depths.len();
+    let mut window_start = 0;
+    let mut window_end = 2;
+    let mut summed_windows: Vec<u16> = Vec::new();
+
+    for _index in 0..(num_depths - 2) {
+        let sum = &depths[window_start..=window_end].iter().sum();
+        summed_windows.push(*sum);
+
+        window_start += 1;
+        window_end += 1;
+    }
+
+    summed_windows
+}
+
 pub struct P1;
 impl Puzzle<u16> for P1 {
     fn number(&self) -> u8 {
@@ -33,5 +50,8 @@ impl Puzzle<u16> for P1 {
         println!("{}", count_increases(depths))
     }
 
-    fn solve_part_two(&self, depths: &Vec<u16>) {}
+    fn solve_part_two(&self, depths: &Vec<u16>) {
+        let summed_windows = build_list_of_summed_windows(depths);
+        println!("{}", count_increases(&summed_windows))
+    }
 }
