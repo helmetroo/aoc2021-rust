@@ -3,8 +3,9 @@ use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::result::Result::{Err, Ok};
 
-pub fn read(num: u8) -> Vec<String> {
-    let filename = format!("{}.txt", num);
+pub fn read(num: u8, test_input: bool) -> Vec<String> {
+    let filename_suffix = if test_input { "-test.txt" } else { ".txt" };
+    let filename = format!("{}{}", num, filename_suffix);
     let path = Path::new("input-files/").join(Path::new(&filename));
 
     let file = match File::open(&path) {
