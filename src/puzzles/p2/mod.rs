@@ -63,17 +63,43 @@ fn compute_position(commands: &Vec<Command>) -> Position {
         .fold(initial_position, |acc, command| match command.direction {
             Direction::Forward => Position {
                 x: acc.x + command.value as i32,
-                y: acc.y,
+                ..acc
             },
             Direction::Down => Position {
-                x: acc.x,
                 y: acc.y + command.value as i32,
+                ..acc
             },
             Direction::Up => Position {
-                x: acc.x,
                 y: acc.y - command.value as i32,
+                ..acc
             },
         })
+}
+
+fn compute_position_with_aim(commands: &Vec<Command>) -> Position {
+    let initial_position = Position { x: 0, y: 0 };
+    let initial_aim = 0i32;
+    let initial_conditions = (initial_position, initial_aim);
+
+    commands
+        .iter()
+        .fold(initial_conditions, |conditions, command| {
+            let (pos, aim) = conditions;
+            match command.direction {
+                Direction::Forward => (
+                    Position {
+                        x: pos.x + command.value as i32,
+                        y: pos.y + (aim * command.value as i32),
+                    },
+                    aim,
+                ),
+
+                Direction::Down => (Position { ..pos }, aim + command.value as i32),
+
+                Direction::Up => (Position { ..pos }, aim - command.value as i32),
+            }
+        })
+        .0
 }
 
 pub struct P2;
@@ -94,5 +120,8 @@ impl Puzzle<Command> for P2 {
         println!("{}", position.x * position.y)
     }
 
-    fn solve_part_two(&self, _commands: &Vec<Command>) {}
+    fn solve_part_two(&self, commands: &Vec<Command>) {
+        let position = compute_position_with_aim(commands);
+        println!("{}", position.x * position.y)
+    }
 }
