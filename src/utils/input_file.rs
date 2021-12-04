@@ -32,3 +32,7 @@ pub fn as_unsigned_short(item: &String) -> u16 {
         Err(_) => panic!("Couldn't parse {} as unsigned short", item),
     }
 }
+
+pub fn as_chars(item: &String) -> Vec<char> {
+    item.chars().collect()
+}
