@@ -103,7 +103,7 @@ fn compute_position_with_aim(commands: &Vec<Command>) -> Position {
 }
 
 pub struct P2;
-impl Puzzle<Command> for P2 {
+impl Puzzle<Vec<Command>> for P2 {
     fn number(&self) -> u8 {
         2
     }

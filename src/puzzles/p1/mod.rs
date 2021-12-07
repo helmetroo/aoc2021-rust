@@ -37,7 +37,7 @@ fn build_list_of_summed_windows(depths: &Vec<u16>) -> Vec<u16> {
 }
 
 pub struct P1;
-impl Puzzle<u16> for P1 {
+impl Puzzle<Vec<u16>> for P1 {
     fn number(&self) -> u8 {
         1
     }
