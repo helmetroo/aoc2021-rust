@@ -1,9 +1,9 @@
 mod puzzles;
 mod utils;
 
-use crate::puzzles::p3::P3;
+use crate::puzzles::p4::P4;
 use crate::puzzles::puzzle::Puzzle;
 
 fn main() {
-    Puzzle::solve(&P3 {}, false)
+    Puzzle::solve(&P4 {}, false)
 }

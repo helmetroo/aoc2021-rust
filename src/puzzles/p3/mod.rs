@@ -90,7 +90,7 @@ fn count_bits_at(bit: usize, report_size: usize, report: &Vec<Vec<char>>) -> (us
 }
 
 pub struct P3;
-impl Puzzle<Vec<char>> for P3 {
+impl Puzzle<Vec<Vec<char>>> for P3 {
     fn number(&self) -> u8 {
         3
     }
