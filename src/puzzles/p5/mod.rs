@@ -1,3 +1,4 @@
+use itertools::Either;
 use std::iter;
 use std::str::FromStr;
 
@@ -50,17 +51,16 @@ impl LineSegment {
     }
 
     fn build_diagonal_walk_list(&self) -> Vec<Position> {
-        // Approach iterator assignment by dynamically allocating
-        let xs: Box<dyn Iterator<Item=i16>> = if self.start.x <= self.end.x {
-            Box::new(self.start.x..self.end.x + 1)
+        let xs = if self.start.x <= self.end.x {
+            Either::Left(self.start.x..=self.end.x)
         } else {
-            Box::new((self.end.x..self.start.x + 1).rev())
+            Either::Right((self.end.x..=self.start.x).rev())
         };
 
-        let ys: Box<dyn Iterator<Item=i16>> = if self.start.y <= self.end.y {
-            Box::new(self.start.y..self.end.y + 1)
+        let ys = if self.start.y <= self.end.y {
+            Either::Left(self.start.y..=self.end.y)
         } else {
-            Box::new((self.end.y..self.start.y + 1).rev())
+            Either::Right((self.end.y..=self.start.y).rev())
         };
 
         xs.zip(ys).map(|(x, y)| Position { x, y }).collect()
@@ -75,8 +75,8 @@ impl LineSegment {
         let max_x = LineSegment::max_coord_for_line(&self, &x);
         let max_y = LineSegment::max_coord_for_line(&self, &y);
 
-        let along_x = min_x..max_x + 1;
-        let along_y = min_y..max_y + 1;
+        let along_x = min_x..=max_x;
+        let along_y = min_y..=max_y;
         let is_vertical = self.is_vertical();
         let (shorter, longer) = if is_vertical {
             (along_x, along_y)
@@ -86,12 +86,12 @@ impl LineSegment {
 
         longer
             .into_iter()
-            .zip(iter::repeat(shorter.start))
+            .zip(iter::repeat(shorter.start()))
             .map(|(x, y)| {
                 if is_vertical {
-                    Position { x: y, y: x }
+                    Position { x: *y, y: x }
                 } else {
-                    Position { x, y }
+                    Position { x, y: *y }
                 }
             })
             .collect::<Vec<Position>>()
