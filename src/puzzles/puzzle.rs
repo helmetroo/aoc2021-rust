@@ -7,7 +7,7 @@ pub trait Puzzle<T> {
 
     fn read_input_file(&self, test_input: bool) -> Vec<String> {
         let number = self.number();
-        input_file::read(number, test_input)
+        input_file::read_lines(number, test_input)
     }
 
     fn parse_data(&self, raw_data: &Vec<String>) -> T;

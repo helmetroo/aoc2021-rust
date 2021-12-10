@@ -3,12 +3,12 @@ use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::result::Result::{Err, Ok};
 
-pub fn read(num: u8, test_input: bool) -> Vec<String> {
+fn open_input_file(num: u8, test_input: bool) -> File {
     let filename_suffix = if test_input { "-test.txt" } else { ".txt" };
     let filename = format!("{}{}", num, filename_suffix);
     let path = Path::new("input-files/").join(Path::new(&filename));
 
-    let file = match File::open(&path) {
+    match File::open(&path) {
         Ok(file) => file,
         Err(_) => {
             let readable_path = path.display();
@@ -17,8 +17,11 @@ pub fn read(num: u8, test_input: bool) -> Vec<String> {
                 num, readable_path
             );
         }
-    };
+    }
+}
 
+pub fn read_lines(num: u8, test_input: bool) -> Vec<String> {
+    let file = open_input_file(num, test_input);
     BufReader::new(file)
         .lines()
         .map(|line| line.expect("Could not parse line"))
