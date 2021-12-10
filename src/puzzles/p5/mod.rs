@@ -5,6 +5,7 @@ use regex::Regex;
 
 use crate::puzzles::puzzle::Puzzle;
 
+#[derive(Clone)]
 pub struct Position {
     x: i16,
     y: i16,
@@ -15,6 +16,7 @@ pub enum Coordinate {
     Y,
 }
 
+#[derive(Clone)]
 pub struct LineSegment {
     start: Position,
     end: Position,
@@ -31,13 +33,43 @@ impl LineSegment {
         self.end.y == self.start.y
     }
 
+    pub fn is_diagonal(&self) -> bool {
+        !self.is_vertical_or_horizontal()
+    }
+
     pub fn is_vertical_or_horizontal(&self) -> bool {
         self.is_vertical() || self.is_horizontal()
     }
 
     pub fn build_walk_list(&self) -> Vec<Position> {
+        if self.is_diagonal() {
+            self.build_diagonal_walk_list()
+        } else {
+            self.build_straight_walk_list()
+        }
+    }
+
+    fn build_diagonal_walk_list(&self) -> Vec<Position> {
+        // Approach iterator assignment by dynamically allocating
+        let xs: Box<dyn Iterator<Item=i16>> = if self.start.x <= self.end.x {
+            Box::new(self.start.x..self.end.x + 1)
+        } else {
+            Box::new((self.end.x..self.start.x + 1).rev())
+        };
+
+        let ys: Box<dyn Iterator<Item=i16>> = if self.start.y <= self.end.y {
+            Box::new(self.start.y..self.end.y + 1)
+        } else {
+            Box::new((self.end.y..self.start.y + 1).rev())
+        };
+
+        xs.zip(ys).map(|(x, y)| Position { x, y }).collect()
+    }
+
+    fn build_straight_walk_list(&self) -> Vec<Position> {
         let x = Coordinate::X;
         let y = Coordinate::Y;
+
         let min_x = LineSegment::min_coord_for_line(&self, &x);
         let min_y = LineSegment::min_coord_for_line(&self, &y);
         let max_x = LineSegment::max_coord_for_line(&self, &x);
@@ -65,7 +97,7 @@ impl LineSegment {
             .collect::<Vec<Position>>()
     }
 
-    pub fn max_coord_for_lines(lines: &Vec<&LineSegment>, coord: &Coordinate) -> i16 {
+    pub fn max_coord_for_lines(lines: &Vec<LineSegment>, coord: &Coordinate) -> i16 {
         lines.into_iter().fold(i16::MIN, |max, line| {
             let cur_max_coord = max;
             let max_coord = LineSegment::max_coord_for_line(line, &coord);
@@ -141,7 +173,7 @@ fn extract_position(
     maybe_x.and_then(|x| maybe_y.map(|y| Position { x, y }))
 }
 
-fn build_intersections_map(lines: &Vec<&LineSegment>) -> Vec<Vec<u32>> {
+fn build_intersections_map(lines: &Vec<LineSegment>) -> Vec<Vec<u32>> {
     let max_x = LineSegment::max_coord_for_lines(lines, &Coordinate::X);
     let max_y = LineSegment::max_coord_for_lines(lines, &Coordinate::Y);
 
@@ -203,13 +235,18 @@ impl Puzzle<Vec<LineSegment>> for P5 {
 
     fn solve_part_one(&self, lines: &Vec<LineSegment>) {
         let vert_or_horiz_lines = lines
-            .into_iter()
+            .iter()
             .filter(|l| l.is_vertical_or_horizontal())
-            .collect::<Vec<&LineSegment>>();
+            .cloned()
+            .collect::<Vec<LineSegment>>();
         let intersections_map = build_intersections_map(&vert_or_horiz_lines);
         let overlapping_points = count_overlapping_points(&intersections_map);
         println!("{:?}", overlapping_points);
     }
 
-    fn solve_part_two(&self, _lines: &Vec<LineSegment>) {}
+    fn solve_part_two(&self, lines: &Vec<LineSegment>) {
+        let intersections_map = build_intersections_map(&lines);
+        let overlapping_points = count_overlapping_points(&intersections_map);
+        println!("{:?}", overlapping_points);
+    }
 }
