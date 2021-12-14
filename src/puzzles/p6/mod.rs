@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::puzzles::puzzle::Puzzle;
+use crate::utils::input_file;
 
 fn count_fish(initial_timers: &Vec<u32>, days: usize) -> u64 {
     // Hint from https://www.reddit.com/r/adventofcode/comments/rdfv7n/comment/ho0sqgs/?utm_source=share&utm_medium=web2x&context=3 to hold a dict of timers
@@ -38,8 +39,7 @@ impl Puzzle<Vec<u32>> for P6 {
     }
 
     fn parse_data(&self, raw_data: &Vec<String>) -> Vec<u32> {
-        let list = &raw_data[0];
-        list.split(',').map(|n| n.parse().unwrap()).collect()
+        input_file::as_unsigned_ints_from_line(&raw_data[0])
     }
 
     fn solve_part_one(&self, initial_timers: &Vec<u32>) {
