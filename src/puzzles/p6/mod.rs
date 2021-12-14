@@ -16,7 +16,9 @@ fn count_fish(initial_timers: &Vec<u32>, days: usize) -> u64 {
         for n in 1..=8 {
             let fish_in_n = *h.entry(n).or_insert(0u64);
             h.entry(n).and_modify(|c| *c -= fish_in_n).or_insert(0u64);
-            h.entry(n - 1).and_modify(|c| *c += fish_in_n).or_insert(0u64);
+            h.entry(n - 1)
+                .and_modify(|c| *c += fish_in_n)
+                .or_insert(0u64);
         }
 
         h.entry(0).and_modify(|c| *c -= new_fish).or_insert(0u64);
