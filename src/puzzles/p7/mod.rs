@@ -3,7 +3,12 @@ use std::cmp;
 use crate::puzzles::puzzle::Puzzle;
 use crate::utils::input_file;
 
-fn build_cost_array(positions: &Vec<u32>) -> Vec<Vec<usize>> {
+enum FuelCostMethod {
+    Delta,
+    SumDelta,
+}
+
+fn build_cost_array(positions: &Vec<u32>, fuel_cost_method: FuelCostMethod) -> Vec<Vec<usize>> {
     // Min is 0, but here for sanity
     let min_pos = positions.iter().min().map(|m| *m as usize).unwrap();
     let max_pos = positions.iter().max().map(|m| *m as usize).unwrap();
@@ -15,8 +20,13 @@ fn build_cost_array(positions: &Vec<u32>) -> Vec<Vec<usize>> {
         for col in 0..num_pos {
             let pos = positions[col] as usize;
             let delta = if pos >= row { pos - row } else { row - pos };
+            let fuel_cost = if matches!(fuel_cost_method, FuelCostMethod::SumDelta) {
+                delta * (delta + 1) / 2
+            } else {
+                delta
+            };
 
-            cost_array[row][col] = delta;
+            cost_array[row][col] = fuel_cost;
         }
     }
     cost_array
@@ -39,10 +49,14 @@ impl Puzzle<Vec<u32>> for P7 {
     }
 
     fn solve_part_one(&self, positions: &Vec<u32>) {
-        let cost_array = build_cost_array(positions);
+        let cost_array = build_cost_array(positions, FuelCostMethod::Delta);
         let min_fuel = compute_min_fuel(cost_array);
         println!("{}", min_fuel);
     }
 
-    fn solve_part_two(&self, _positions: &Vec<u32>) {}
+    fn solve_part_two(&self, positions: &Vec<u32>) {
+        let cost_array = build_cost_array(positions, FuelCostMethod::SumDelta);
+        let min_fuel = compute_min_fuel(cost_array);
+        println!("{}", min_fuel);
+    }
 }
