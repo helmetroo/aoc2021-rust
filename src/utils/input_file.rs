@@ -40,6 +40,10 @@ pub fn as_chars(item: &String) -> Vec<char> {
     item.chars().collect()
 }
 
+pub fn as_contig_unsigned_bytes(line: &String) -> Vec<u8> {
+    line.chars().map(|n| n as u8 - 48).collect()
+}
+
 pub fn as_unsigned_ints_from_line(line: &String) -> Vec<u32> {
     line.split(',').map(|n| n.parse().unwrap()).collect()
 }
