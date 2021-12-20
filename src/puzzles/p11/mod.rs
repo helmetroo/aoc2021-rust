@@ -100,7 +100,7 @@ fn get_adjacents(cells: &CellSet, rows: usize, cols: usize) -> AdjacentCells {
     all_adjacents
 }
 
-fn get_adjacents_from((row, col): Position, rows: usize, cols: usize) -> Vec<Position> {
+fn get_adjacents_from((row, col): Position, rows: usize, cols: usize) -> AdjacentCells {
     let path_increments: Vec<PathIncr> = vec![
         (-1, 0),
         (1, 0),
