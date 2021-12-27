@@ -128,11 +128,10 @@ fn get_grid_bounds(instructions: &[Instruction]) -> Bounds {
         })
 }
 
-fn fold_grid(grid: &mut Grid, axis: Axis, position: usize) -> Grid {
+fn fold_grid(grid: &Grid, axis: Axis, position: usize) -> Grid {
     let rows = grid.len();
     let cols = grid[0].len();
 
-    // 2*pos = (pos+1) + (pos-1)
     let along_y_axis = matches!(axis, Axis::Y);
     let row_range = if along_y_axis {
         (
@@ -172,7 +171,9 @@ fn fold_grid(grid: &mut Grid, axis: Axis, position: usize) -> Grid {
         |src_col, cols| cols - 1 - src_col
     };
 
-    let mut dest_grid = vec![vec![false; col_range.1]; row_range.1];
+    let dest_grid_cols = col_range.1 - col_range.0;
+    let dest_grid_rows = row_range.1 - row_range.0;
+    let mut dest_grid = vec![vec![false; dest_grid_cols]; dest_grid_rows];
     fold_grid_with(
         grid,
         &mut dest_grid,
@@ -222,22 +223,26 @@ fn count_dots(grid: &Grid) -> usize {
     )
 }
 
-fn dot_count_from_instructions(instructions: &Vec<Instruction>, folds: usize) -> usize {
+fn repeatedly_fold_grid(instructions: &Vec<Instruction>, folds: Option<usize>) -> Grid {
     let fold_index = instructions
         .iter()
         .position(|instruction| matches!(instruction, Instruction::Fold { .. }))
         .unwrap();
     let dots = &instructions[0..fold_index];
-    let folds = &instructions[fold_index..fold_index + folds];
+    let folds = if folds.is_some() {
+        &instructions[fold_index..fold_index + folds.unwrap()]
+    } else {
+        &instructions[fold_index..]
+    };
 
     let mut grid = construct_grid(dots);
     for fold in folds {
         if let Instruction::Fold { axis, position } = fold {
-            grid = fold_grid(&mut grid, *axis, *position);
+            grid = fold_grid(&grid, *axis, *position);
         }
     }
 
-    count_dots(&grid)
+    grid
 }
 
 fn print_grid(grid: &Grid) {
@@ -276,9 +281,13 @@ impl Puzzle<Vec<Instruction>> for P13 {
     }
 
     fn solve_part_one(&self, instructions: &Vec<Instruction>) {
-        let dot_count = dot_count_from_instructions(instructions, 1);
+        let final_grid = repeatedly_fold_grid(instructions, Some(1));
+        let dot_count = count_dots(&final_grid);
         println!("{}", dot_count);
     }
 
-    fn solve_part_two(&self, _instructions: &Vec<Instruction>) {}
+    fn solve_part_two(&self, instructions: &Vec<Instruction>) {
+        let final_grid = repeatedly_fold_grid(instructions, None);
+        print_grid(&final_grid);
+    }
 }
