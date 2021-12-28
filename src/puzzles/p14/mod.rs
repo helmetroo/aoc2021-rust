@@ -4,11 +4,25 @@ use std::str::FromStr;
 use itertools::Itertools;
 
 use crate::puzzles::puzzle::Puzzle;
-use crate::utils::hashmap::{get_extreme_value, increment_count, Extreme};
+use crate::utils::hashmap::{
+    add_to_count, get_extreme_value, increment_count, subtract_from_count,
+    Extreme,
+};
 
 struct PairInsertionRule {
     pair: String,
     element: char,
+}
+
+enum ModificationMethod {
+    Increment,
+    Decrement,
+}
+
+struct Modification {
+    pair: String,
+    method: ModificationMethod,
+    count: u64,
 }
 
 type ParsePairInsertionRuleErr = &'static str;
@@ -33,69 +47,122 @@ pub struct Manual {
     insertion_rules: PairInsertionRules,
 }
 
-type PolymerCounts = HashMap<char, u32>;
-type PolymerInsertion = (String, PolymerCounts);
+type ElementCounts = HashMap<char, u64>;
+type PairCounts = HashMap<String, u64>;
+type Modifications = Vec<Modification>;
 
 fn insert_polymers_and_count_elems(
     s: &String,
     insertion_rules: &PairInsertionRules,
-) -> PolymerInsertion {
-    let mut handled_first_pair = false;
+    steps: usize,
+) -> ElementCounts {
+    // Build up initial pair counts
+    let mut pair_counts =
+        s.chars()
+            .tuple_windows()
+            .fold(PairCounts::new(), |mut counts, (left_elem, right_elem)| {
+                let pair = [left_elem, right_elem].iter().collect::<String>();
+                increment_count(pair, &mut counts);
+                counts
+            });
 
-    s.chars().tuple_windows().fold(
-        (String::new(), PolymerCounts::new()),
-        |(mut cur_str, mut counts), (left_elem, right_elem)| {
-            let pair = [left_elem, right_elem].iter().collect::<String>();
-            let new_elem = insertion_rules.get(&pair);
-
-            if !handled_first_pair {
-                increment_count(left_elem, &mut counts);
-                cur_str.push(left_elem);
-
-                handled_first_pair = true;
-            }
-
-            if new_elem.is_some() {
-                let middle_elem = *new_elem.unwrap();
-                increment_count(middle_elem, &mut counts);
-                cur_str.push(middle_elem);
-            }
-
-            increment_count(right_elem, &mut counts);
-            cur_str.push(right_elem);
-
-            (cur_str, counts)
-        },
-    )
-}
-
-fn insert_polymers_and_count_elems_from(manual: &Manual, steps: usize) -> PolymerCounts {
-    let mut seed_str = manual.template.clone();
-    let mut counts = PolymerCounts::new();
     for _ in 0..steps {
-        let (next_seed_str, next_counts) =
-            insert_polymers_and_count_elems(&seed_str, &manual.insertion_rules);
-        seed_str = next_seed_str;
-        counts = next_counts;
+        let modifications = get_modifications(&pair_counts, insertion_rules);
+        apply_modifications(&mut pair_counts, &modifications);
     }
 
-    counts
+    // Sum up counts of each character
+    let double_pair_counts =
+        pair_counts
+            .iter()
+            .fold(ElementCounts::new(), |mut elem_counts, (pair, count)| {
+                if let [left_elem, right_elem] = pair.chars().take(2).collect::<Vec<_>>()[..] {
+                    add_to_count(left_elem, *count, &mut elem_counts);
+                    add_to_count(right_elem, *count, &mut elem_counts);
+                }
+
+                elem_counts
+            });
+
+    double_pair_counts
+        .iter()
+        .fold(ElementCounts::new(), |mut final_counts, (pair, &count)| {
+            let final_count = if count % 2 == 1 {
+                (count / 2) + 1
+            } else {
+                count / 2
+            };
+            final_counts.insert(*pair, final_count);
+            final_counts
+        })
 }
 
-fn diff_btw_extreme_elems(counts: &PolymerCounts) -> u32 {
+fn get_modifications(
+    pair_counts: &PairCounts,
+    insertion_rules: &PairInsertionRules,
+) -> Modifications {
+    let mut modifications = Modifications::new();
+    for (pair, count) in pair_counts {
+        let new_elem = insertion_rules.get(pair);
+        if new_elem.is_some() {
+            modifications.push(Modification {
+                pair: pair.to_string(),
+                method: ModificationMethod::Decrement,
+                count: *count,
+            });
+
+            let middle_elem = new_elem.unwrap();
+
+            let left_pair = [*middle_elem, pair.chars().nth(1).unwrap()]
+                .iter()
+                .collect::<String>();
+            modifications.push(Modification {
+                pair: left_pair,
+                method: ModificationMethod::Increment,
+                count: *count,
+            });
+
+            let right_pair = [pair.chars().nth(0).unwrap(), *middle_elem]
+                .iter()
+                .collect::<String>();
+            modifications.push(Modification {
+                pair: right_pair,
+                method: ModificationMethod::Increment,
+                count: *count,
+            });
+        }
+    }
+
+    modifications
+}
+
+fn apply_modifications(pair_counts: &mut PairCounts, modifications: &Modifications) {
+    modifications
+        .iter()
+        .fold(pair_counts, |counts, modification| {
+            let count = modification.count;
+
+            if matches!(modification.method, ModificationMethod::Decrement) {
+                let pair = modification.pair.clone();
+                subtract_from_count(pair, count, counts);
+            } else {
+                let pair = modification.pair.clone();
+                add_to_count(pair, count, counts);
+            }
+
+            counts
+        });
+}
+
+fn diff_btw_extreme_elems(counts: &ElementCounts) -> u64 {
     let max_elem = get_extreme_value(counts, Extreme::Max);
     let min_elem = get_extreme_value(counts, Extreme::Min);
 
-    max_elem
-        .zip(min_elem)
-        .map(|(max, min)| {
-            max - min
-        })
-        .unwrap()
+    max_elem.zip(min_elem).map(|(max, min)| max - min).unwrap()
 }
 
-fn insert_polymers_and_get_diff_btw_extremes(manual: &Manual, steps: usize) -> u32 {
-    let counts = insert_polymers_and_count_elems_from(manual, steps);
+fn insert_polymers_and_get_diff_btw_extremes(manual: &Manual, steps: usize) -> u64 {
+    let counts = insert_polymers_and_count_elems(&manual.template, &manual.insertion_rules, steps);
     diff_btw_extreme_elems(&counts)
 }
 
@@ -133,5 +200,8 @@ impl Puzzle<Manual> for P14 {
         println!("{}", diff);
     }
 
-    fn solve_part_two(&self, _manual: &Manual) {}
+    fn solve_part_two(&self, manual: &Manual) {
+        let diff = insert_polymers_and_get_diff_btw_extremes(manual, 40);
+        println!("{}", diff);
+    }
 }
