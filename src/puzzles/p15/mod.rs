@@ -37,8 +37,53 @@ impl PartialOrd for Node {
 
 type Index = (usize, usize);
 type PathIncr = (isize, isize);
-type RiskGrid = Vec<Vec<u8>>;
 type AdjacencyGraph = HashMap<Index, Vec<Edge>>;
+type RiskGridData = Vec<Vec<u8>>;
+
+pub struct RiskGrid {
+    data: RiskGridData,
+    orig_rows: usize,
+    orig_cols: usize,
+    rows: usize,
+    cols: usize
+}
+
+impl RiskGrid {
+    pub fn new(data: Vec<Vec<u8>>, rows_scale: usize, cols_scale: usize) -> Self {
+        let orig_rows = data.len();
+        let rows = orig_rows * rows_scale;
+
+        let orig_cols = data[0].len();
+        let cols = orig_cols * cols_scale;
+
+        RiskGrid {
+            data,
+            orig_rows,
+            orig_cols,
+            rows,
+            cols
+        }
+    }
+
+    pub fn at(&self, (row, col): Index) -> u8 {
+        if row < self.orig_rows && col < self.orig_cols {
+            self.data[row][col]
+        } else {
+            let orig_row = row % self.orig_rows;
+            let orig_col = col % self.orig_cols;
+            let value = self.data[orig_row][orig_col];
+            let row_to_add = (row / self.orig_rows) as u8;
+            let col_to_add = (col / self.orig_cols) as u8;
+            let new_value_wrapped = next_in_range(value, row_to_add + col_to_add, 9);
+            new_value_wrapped
+        }
+    }
+}
+
+// Trick to keep numbers in 1..9 range a la https://stackoverflow.com/a/3803420
+fn next_in_range(i: u8, m: u8, n: u8) -> u8 {
+    (i + m - 1) % n + 1
+}
 
 pub struct Graph {
     start: Index,
@@ -48,9 +93,9 @@ pub struct Graph {
 impl Graph {
     pub fn new(grid: &RiskGrid) -> Self {
         let mut adjacency_graph = AdjacencyGraph::new();
-        let rows = grid.len();
+        let rows = grid.rows;
         let last_row = rows - 1;
-        let cols = grid[0].len();
+        let cols = grid.cols;
         let last_col = cols - 1;
 
         for row in 0..rows {
@@ -69,7 +114,7 @@ impl Graph {
                             let next_row = ((row as isize) + y_inc) as usize;
                             let next_col = ((col as isize) + x_inc) as usize;
                             let edge = Edge {
-                                risk: grid[next_row][next_col],
+                                risk: grid.at((next_row, next_col)),
                                 dest: (next_row, next_col),
                             };
                             Some(edge)
@@ -148,24 +193,29 @@ fn compute_size_of_least_risky_path(graph: &Graph) -> u32 {
 }
 
 pub struct P15;
-impl Puzzle<Graph> for P15 {
+impl Puzzle<RiskGridData> for P15 {
     fn number(&self) -> u8 {
         15
     }
 
-    fn parse_data(&self, raw_data: &Vec<String>) -> Graph {
-        let grid = raw_data
+    fn parse_data(&self, raw_data: &Vec<String>) -> RiskGridData {
+        raw_data
             .iter()
             .map(|line| input_file::as_contig_unsigned_bytes(line))
-            .collect::<RiskGrid>();
-
-        Graph::new(&grid)
+            .collect::<RiskGridData>()
     }
 
-    fn solve_part_one(&self, graph: &Graph) {
+    fn solve_part_one(&self, grid_data: &RiskGridData) {
+        let grid = RiskGrid::new(grid_data.to_vec(), 1, 1);
+        let graph = Graph::new(&grid);
         let least_risky_path_size = compute_size_of_least_risky_path(&graph);
         println!("{}", least_risky_path_size);
     }
 
-    fn solve_part_two(&self, _graph: &Graph) {}
+    fn solve_part_two(&self, grid_data: &RiskGridData) {
+        let grid = RiskGrid::new(grid_data.to_vec(), 5, 5);
+        let graph = Graph::new(&grid);
+        let least_risky_path_size = compute_size_of_least_risky_path(&graph);
+        println!("{}", least_risky_path_size);
+    }
 }
