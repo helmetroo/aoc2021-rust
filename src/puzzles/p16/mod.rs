@@ -1,4 +1,23 @@
+use lazy_static::lazy_static;
+use num_derive::FromPrimitive;
+
 use crate::puzzles::puzzle::Puzzle;
+
+lazy_static! {
+    static ref INFINITY: u64 = u64::MAX;
+    static ref NEG_INFINITY: u64 = u64::MIN;
+}
+
+#[derive(FromPrimitive, Debug)]
+pub enum Operand {
+    Sum = 0,
+    Product = 1,
+    Min = 2,
+    Max = 3,
+    Gt = 5,
+    Lt = 6,
+    Eql = 7,
+}
 
 // Version can fit into u8
 #[derive(Debug)]
@@ -8,6 +27,7 @@ pub enum Packet {
         value: u64,
     },
     Operator {
+        operand: Operand,
         version: u64,
         subpackets: Vec<Packet>,
     },
@@ -78,8 +98,10 @@ fn parse_binary_string(bin_str: &str) -> (Packet, usize) {
             }
         }
 
+        let operand = num_traits::FromPrimitive::from_u64(id).unwrap();
         (
             Packet::Operator {
+                operand,
                 version,
                 subpackets,
             },
@@ -141,10 +163,80 @@ fn sum_versions(packet: &Packet) -> u64 {
         Packet::Operator {
             version,
             subpackets,
+            ..
         } => subpackets
             .iter()
             .fold(*version, |sum, packet| sum + sum_versions(packet)),
         Packet::Literal { version, .. } => *version,
+    }
+}
+
+fn evaluate(packet: &Packet) -> u64 {
+    match packet {
+        Packet::Operator {
+            operand,
+            subpackets,
+            ..
+        } => match operand {
+            Operand::Sum => subpackets
+                .iter()
+                .fold(0, |sum, packet| sum + evaluate(packet)),
+
+            Operand::Product => subpackets
+                .iter()
+                .fold(1, |product, packet| product * evaluate(packet)),
+
+            Operand::Min => subpackets.iter().fold(*INFINITY, |current_min, packet| {
+                let value = evaluate(packet);
+                if value <= current_min {
+                    value
+                } else {
+                    current_min
+                }
+            }),
+
+            Operand::Max => subpackets
+                .iter()
+                .fold(*NEG_INFINITY, |current_max, packet| {
+                    let value = evaluate(packet);
+                    if value >= current_max {
+                        value
+                    } else {
+                        current_max
+                    }
+                }),
+
+            Operand::Gt => {
+                let first = evaluate(&subpackets[0]);
+                let second = evaluate(&subpackets[1]);
+                if first > second {
+                    1
+                } else {
+                    0
+                }
+            }
+
+            Operand::Lt => {
+                let first = evaluate(&subpackets[0]);
+                let second = evaluate(&subpackets[1]);
+                if first < second {
+                    1
+                } else {
+                    0
+                }
+            }
+
+            Operand::Eql => {
+                let first = evaluate(&subpackets[0]);
+                let second = evaluate(&subpackets[1]);
+                if first == second {
+                    1
+                } else {
+                    0
+                }
+            }
+        },
+        Packet::Literal { value, .. } => *value,
     }
 }
 
@@ -164,5 +256,8 @@ impl Puzzle<Packet> for P16 {
         println!("{}", version_sum);
     }
 
-    fn solve_part_two(&self, _packet: &Packet) {}
+    fn solve_part_two(&self, packet: &Packet) {
+        let result = evaluate(packet);
+        println!("{}", result);
+    }
 }
