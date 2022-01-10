@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::str::FromStr;
 
 use lazy_static::lazy_static;
@@ -11,20 +12,30 @@ pub struct Bounds {
     y: MinMax,
 }
 
-#[derive(Clone)]
-struct Position {
+#[derive(Debug, Eq, Hash, Clone)]
+struct Vector2D {
     x: i32,
     y: i32,
 }
-impl Position {
+impl Vector2D {
     pub fn new() -> Self {
-        Position { x: 0, y: 0 }
+        Vector2D { x: 0, y: 0 }
+    }
+}
+impl PartialEq for Vector2D {
+    fn eq(&self, other: &Self) -> bool {
+        self.x.eq(&other.x) && self.y.eq(&other.y)
     }
 }
 
 struct Trajectory {
     max_y: i32,
     hit_bounds: bool,
+}
+
+struct Report {
+    max_y: i32,
+    unique_vels_count: usize,
 }
 
 lazy_static! {
@@ -68,38 +79,51 @@ fn extract_bounds(captures: &regex::Captures) -> Bounds {
     Bounds { x: xs, y: ys }
 }
 
-fn find_max_y_over_trajectories(bounds: &Bounds) -> i32 {
+fn find_max_y_over_trajectories(bounds: &Bounds) -> Report {
     /*
-      Yes, it's a brute force search, but I wanted to prune the search bounds to make it run a bit faster by making some educated stabs in the dark.
-      i.e. Smallest x velocity is sqrt(2*x_min), as this follows from parabolic projectile motion (x' = x_vel - t) => (x = x_vel*t - t^2 / 2)
+      Yes, it's a brute force search, but I wanted to prune the search bounds to make
+      it run a bit faster by making some educated stabs in the dark.
+      i.e. Smallest x velocity is sqrt(2*x_min), as this follows from
+      parabolic projectile motion (x' = x_vel - t) => (x = x_vel*t - t^2 / 2)
     */
 
     let smallest_x_vel = (2f32 * bounds.x.0 as f32).sqrt().floor() as i32;
-    let x_velocities = smallest_x_vel..bounds.x.1;
-    let y_velocities = bounds.y.1..(-bounds.y.0);
+
+    let x_velocities = smallest_x_vel..bounds.x.1 * 2;
+    let y_velocities = bounds.y.1 * 2..-bounds.y.0 * 2;
+
     let mut max_y = *NEGATIVE_INFINITY;
+    let mut unique_vels = HashSet::new();
+
     for x_vel in x_velocities {
         for y_vel in y_velocities.clone() {
             let Trajectory {
                 max_y: cur_max_y,
                 hit_bounds,
             } = build_trajectory(bounds, x_vel, y_vel);
+
             if hit_bounds {
+                unique_vels.insert(Vector2D { x: x_vel, y: y_vel });
+
                 if cur_max_y >= max_y {
-                    max_y = cur_max_y
+                    max_y = cur_max_y;
                 }
             }
         }
     }
 
-    max_y
+    let unique_vels_count = unique_vels.len();
+    Report {
+        max_y,
+        unique_vels_count,
+    }
 }
 
 fn build_trajectory(bounds: &Bounds, x_vel: i32, y_vel: i32) -> Trajectory {
     let mut keep_going = true;
     let mut hit_bounds = false;
     let mut path = Vec::new();
-    let mut position = Position::new();
+    let mut position = Vector2D::new();
     let mut cur_x_vel = x_vel;
     let mut cur_y_vel = y_vel;
     while keep_going {
@@ -133,9 +157,14 @@ impl Puzzle<Bounds> for P17 {
     }
 
     fn solve_part_one(&self, bounds: &Bounds) {
-        let max_y = find_max_y_over_trajectories(bounds);
+        let Report { max_y, .. } = find_max_y_over_trajectories(bounds);
         println!("{}", max_y);
     }
 
-    fn solve_part_two(&self, _bounds: &Bounds) {}
+    fn solve_part_two(&self, bounds: &Bounds) {
+        let Report {
+            unique_vels_count, ..
+        } = find_max_y_over_trajectories(bounds);
+        println!("{}", unique_vels_count);
+    }
 }
